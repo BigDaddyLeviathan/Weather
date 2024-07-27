@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Weather App</title>
+</head>
+<body>
+<h1>Get Weather Forecast</h1>
+<form method="post">
+{% csrf_token %}
+{{ form.as_p }}
+<button type="submit">Get Weather</button>
+</form>
+
+{% if weather_data %}
+<h2>Weather Data:</h2>
+<ul>
+{% if weather_data == 'No results found for the city.' %}
+<li>{{ weather_data }}</li>
+{% else %}
+{% for temp in weather_data %}
+<li>{{ temp }}°C</li>
+{% endfor %}
+{% endif %}
+</ul>
+{% endif %}
+</body>
+</html>

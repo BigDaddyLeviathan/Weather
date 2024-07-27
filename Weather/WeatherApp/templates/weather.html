@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather App</title>
+    <!-- Подключение jQuery и jQuery UI для автопоиска -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <style>
+        /* Стили для улучшения внешнего вида страницы */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .weather-data, .search-history {
+            margin-top: 20px;
+        }
+        .weather-data ul, .search-history ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .weather-data li, .search-history li {
+            background-color: #e9f7ff;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .search-history li a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .search-history li a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Погода в вашем городе</h1>
+        <!-- Форма для ввода города -->
+        <form method="post">
+            {% csrf_token %}  <!-- Токен защиты от CSRF -->
+            <div class="form-group">
+                {{ form.city.label_tag }}  <!-- Метка поля формы -->
+                {{ form.city }}  <!-- Поле ввода для города с автопоиском -->
+            </div>
+            <button type="submit">Узнать погоду</button>  <!-- Кнопка для отправки формы -->
+        </form>
+
+        {% if weather_data %}  <!-- Проверка, есть ли данные о погоде -->
+            <div class="weather-data">
+                <h2>Погода на ближайшие 12 часов:</h2>
+                <ul>
+                    {% if weather_data == 'Ваш город не найден' or weather_data == 'Нет прогноза для вашего города' %}
+                        <li>{{ weather_data }}</li>  <!-- Сообщение об ошибке -->
+                    {% else %}
+                        {% for time, temp in weather_data %}  <!-- Перебор данных о погоде -->
+                            <li>{{ time }}: {{ temp }}°C</li>  <!-- Отображение времени и температуры -->
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% if search_history %}
+            <div class="search-history">
+                <h2>История поиска:</h2>
+                <ul>
+                    {% for city in search_history %}
+                        <!-- Кликабельная ссылка для повторного поиска по городу -->
+                        <li><a href="?city={{ city }}">{{ city }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Скрипт для автопоиска городов -->
+    <script>
+        $(document).ready(function() {
+            $("#id_city").autocomplete({
+                source: function(request, response) {
+                    // Логирование запроса
+                    console.log("Request term: ", request.term);
+                    $.ajax({
+                        url: "https://api.opencagedata.com/geocode/v1/json",
+                        dataType: "json",
+                        data: {
+                            key: "APIKEY",
+                            q: request.term,
+                            limit: 10  // Ограничение количества результатов
+                        },
+                        success: function(data) {
+                            // Логирование ответа
+                            console.log("Response data: ", data);
+                            response($.map(data.results, function(item) {
+                                // Фильтрация результатов для получения только городов
+                                var components = item.components;
+                                if (components.city || components.town || components.village) {
+                                    return {
+                                        label: components.city || components.town || components.village,
+                                        value: components.city || components.town || components.village
+                                    };
+                                }
+                            }));
+                        }
+                    });
+                },
+                minLength: 2,  // Минимальное количество символов для начала поиска
+                select: function(event, ui) {
+                    $("#id_city").val(ui.item.value);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
